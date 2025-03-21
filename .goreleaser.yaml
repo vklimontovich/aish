@@ -1,4 +1,5 @@
 project_name: aish
+version: 2
 
 builds:
   - id: aish
