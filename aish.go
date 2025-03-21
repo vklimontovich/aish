@@ -290,9 +290,13 @@ func main() {
 		}
 		cmdOutput, cmdError, resultCode := runShellCommand(cmd)
 
-		if resultCode != 0 && stop {
-			fmt.Printf(Red+"❌ Command failed with error: %s\n", cmdError)
-			os.Exit(resultCode)
+		if stop {
+			if resultCode != 0 {
+				fmt.Printf(Red+"❌ Command failed with error: %s\n", cmdError)
+				os.Exit(resultCode)
+			}
+			fmt.Printf(Green + "✅ Command succeeded!\n")
+			os.Exit(0)
 		}
 
 		resultStr := "SUCCEDED"
