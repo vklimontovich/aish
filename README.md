@@ -4,13 +4,35 @@
 
 > Your AI-powered command line assistant that turns natural language into shell commands!
 
+Example: 
+```
+❯ ./aish **what is the largest process in memory right now and what is the full path to a command that started it**
+💬 Tool wants to run: ps aux --sort=-%mem | awk 'NR==2{print $11, $6}'
+Run this command? [y/N] y
+ℹ️ Running command: ps aux --sort=-%mem | awk 'NR==2{print $11, $6}'
+ps: illegal option -- -
+usage: ps [-AaCcEefhjlMmrSTvwXx] [-O fmt | -o fmt] [-G gid[,gid...]]
+          [-u]
+          [-p pid[,pid...]] [-t tty[,tty...]] [-U user[,user...]]
+       ps [-L]
+
+💬 Tool wants to run: ps aux | sort -nrk 4 | head -n 1 | awk '{print $11, $6}'
+Run this command? [y/N] y
+ℹ️ Running command: ps aux | sort -nrk 4 | head -n 1 | awk '{print $11, $6}'
+/Users/vklmn/Applications/IntelliJ 3596096
+
+💬 Tool wants to run: ps aux | sort -nrk 4 | head -n 1 | awk '{print $11, $6}'
+Run this command? [y/N] y
+ℹ️ Running command: ps aux | sort -nrk 4 | head -n 1 | awk '{print $11, $6}'
+/Users/vklmn/Applications/IntelliJ 3596128
+```
+
 ## ✨ Features
 
 - 🔮 Convert natural language instructions into shell commands
-- 🛡️ Interactive confirmation before executing commands (unless in unsafe mode)
-- 🔄 Command execution with real-time feedback
+- 🔄 Interractive mode if LLM needs any clarifications
 - 🔑 Simple configuration management
-- 🚀 Support for OpenAI and Helicone API integration
+- 🚀 Support for OpenAI, Helicone API. Other backends support is coming
 
 ## 🚀 Installation
 
@@ -19,14 +41,6 @@
 ```bash
 brew tap vklimontovich/aish
 brew install aish
-```
-
-### 🔨 From Source
-
-```bash
-git clone https://github.com/vklimontovich/aish.git
-cd aish
-make build
 ```
 
 ## 🔧 Configuration
@@ -68,15 +82,3 @@ ai how much disk space am I using
 - `--unsafe` or `-u`: Run commands without confirmation prompts
 - `--debug`: Enable debug mode for verbose output
 - `--config key=value`: Set configuration values
-
-## 🧠 How It Works
-
-Aish leverages OpenAI's API to interpret your natural language instructions and convert them into appropriate shell commands for your operating system. Before execution, it shows you the command and asks for confirmation (unless in unsafe mode).
-
-## 🔒 Security Note
-
-By default, aish always prompts for confirmation before executing any command. Use the `--unsafe` flag with caution, as it will execute commands without asking for confirmation.
-
-## 📄 License
-
-MIT License 

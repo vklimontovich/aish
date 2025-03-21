@@ -11,7 +11,9 @@ builds:
       - -s -w
 
 archives:
-  - format: tar.gz
+  - id: default
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
       - README.md
@@ -21,7 +23,7 @@ checksum:
 
 brews:
   - name: aish
-    tap:
+    repository:
       owner: vklimontovich
       name: homebrew-aish
     commit_author:
