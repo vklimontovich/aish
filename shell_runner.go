@@ -101,19 +101,22 @@ func format(pattern string, data interface{}) (string, error) {
 }
 
 func promptConfirm(cmdDescription string) (bool, error) {
-	shellSnippet, err := format(`Are you sure you want to run {.bold}{.cmd}{.reset}? [y/N] `,
-		map[string]interface{}{"cmd": cmdDescription, "bold": Bold, "reset": Reset})
-	if err != nil {
-		exitWithError("Failed to format shell snippet: %v", err)
-	}
-	fmt.Print(shellSnippet)
+	// Format the command description with bold and reset ANSI codes
+	formattedCmd := fmt.Sprintf("%s%s%s", Bold, cmdDescription, Reset)
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		str := scanner.Text()
-		if str != "" {
-			return strings.TrimSpace(str) == "y", nil
-		}
+	// Print the prompt
+	fmt.Printf("Are you sure you want to run %s? [y/N]: ", formattedCmd)
+
+	// Read user input
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false, err
 	}
-	return false, nil
+
+	// Trim whitespace and convert to lowercase
+	response = strings.TrimSpace(strings.ToLower(response))
+
+	// Return true if the response is 'y' or 'yes'
+	return response == "y" || response == "yes", nil
 }
