@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/creack/pty"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
@@ -29,6 +30,11 @@ const (
 
 func runShellCommand(cmd string) (string, string, int) {
 	fmt.Printf("ℹ️ Running command: %s\n", cmd)
+	oldState, err := terminal.MakeRaw(0)
+	if err != nil {
+		panic(err)
+	}
+	defer terminal.Restore(0, oldState)
 
 	execCmd := exec.Command("sh", "-c", cmd)
 
