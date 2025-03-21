@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/spf13/pflag v1.0.6
 	golang.org/x/crypto v0.36.0
+	github.com/muesli/cancelreader v0.2.2
 )
 
 require (
