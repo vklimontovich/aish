@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"github.com/creack/pty"
@@ -59,7 +60,7 @@ func runShellCommand(cmd string) (string, string, int) {
 		_, _ = io.Copy(os.Stdout, reader)
 	}()
 
-	// Send whatever we type into the PTY’s stdin
+	// Send whatever we type into the PTY's stdin
 	go func() {
 		_, _ = io.Copy(ptmx, os.Stdin)
 	}()
@@ -85,56 +86,22 @@ func format(pattern string, data interface{}) (string, error) {
 }
 
 func promptConfirm(cmdDescription string) (bool, error) {
-	shellSnippet, err := format(`
-      read -p "Are you sure you want to run {.bold}{.cmd}{.reset}? [y/N] " answer
-      # Echo the user input so Go can parse it
-      echo "USER_ANSWER=$answer"
-    `, map[string]interface{}{"cmd": cmdDescription, "bold": Bold, "reset": Reset})
+	// Format the command description with bold and reset ANSI codes
+	formattedCmd := fmt.Sprintf("%s%s%s", Bold, cmdDescription, Reset)
+
+	// Print the prompt
+	fmt.Printf("Are you sure you want to run %s? [y/N]: ", formattedCmd)
+
+	// Read user input
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
 	if err != nil {
-		exitWithError("Failed to format shell snippet: %v", err)
-	}
-	cmd := exec.Command("sh", "-c", shellSnippet)
-
-	// Create PTY
-	ptmx, err := pty.Start(cmd)
-	if err != nil {
-		return false, fmt.Errorf("failed to start PTY: %w", err)
-	}
-	defer ptmx.Close()
-
-	// We capture all PTY output into stdoutBuf
-	var stdoutBuf bytes.Buffer
-	// Use TeeReader so that everything from PTY is:
-	//   1) Copied into stdoutBuf
-	//   2) Also printed to user’s screen
-	reader := io.TeeReader(ptmx, &stdoutBuf)
-
-	// Display anything the shell writes (prompt, echo, etc.) in real-time
-	go func() {
-		_, _ = io.Copy(os.Stdout, reader)
-	}()
-
-	// Forward anything user types from our real stdin to the PTY
-	go func() {
-		_, _ = io.Copy(ptmx, os.Stdin)
-	}()
-
-	// Wait for shell to finish
-	err = cmd.Wait()
-	if err != nil {
-		return false, fmt.Errorf("shell command failed: %w", err)
+		return false, err
 	}
 
-	// Now parse stdoutBuf for "USER_ANSWER=..."
-	lines := strings.Split(stdoutBuf.String(), "\n")
-	for _, line := range lines {
-		if strings.HasPrefix(line, "USER_ANSWER=") {
-			answer := strings.TrimPrefix(line, "USER_ANSWER=")
-			answer = strings.ToLower(strings.TrimSpace(answer))
-			return (answer == "y"), nil
-		}
-	}
+	// Trim whitespace and convert to lowercase
+	response = strings.TrimSpace(strings.ToLower(response))
 
-	// If we never saw a "USER_ANSWER=", treat as not confirmed
-	return false, nil
+	// Return true if the response is 'y' or 'yes'
+	return response == "y" || response == "yes", nil
 }
