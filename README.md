@@ -39,8 +39,7 @@ Run this command? [y/N] y
 ### 🍺 Homebrew (macOS and Linux)
 
 ```bash
-brew tap vklimontovich/aish
-brew install aish
+brew install vklimontovich/aish/aish
 ```
 
 ## 🔧 Configuration

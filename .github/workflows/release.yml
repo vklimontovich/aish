@@ -67,4 +67,4 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != false }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goreleaser release --clean
+        run: goreleaser release --clean --skip=validate
