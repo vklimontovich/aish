@@ -162,14 +162,22 @@ func main() {
 	var useShell bool
 	var shellArgs []string
 	var helpFlag bool
+	var versionFlag bool
 	// Parse CLI flags
 	pflag.StringArrayVar(&configArgs, "config", []string{}, "Set config value: --config ai_key=XXX")
 	pflag.BoolVar(&useShell, "shell", false, "Run command directly, mainly for testing")
 	pflag.BoolVarP(&unsafeFlag, "unsafe", "u", false, "Run without confirmation")
 	pflag.BoolVar(&debugFlag, "debug", false, "Debug mode")
 	pflag.BoolVarP(&helpFlag, "help", "h", false, "Display help information")
+	pflag.BoolVarP(&versionFlag, "version", "v", false, "Display version information")
 	pflag.Parse()
 	args := pflag.Args()
+
+	// Display version if requested
+	if versionFlag {
+		fmt.Printf("aish version %s\n", Version)
+		os.Exit(0)
+	}
 
 	// Display help if requested
 	if helpFlag {
@@ -319,7 +327,7 @@ func main() {
 
 // Display help information about the tool
 func displayHelp() {
-	fmt.Printf("%s🚀 aish - AI Shell Assistant%s\n\n", successColor(""), "")
+	fmt.Printf("%s🚀 aish - AI Shell Assistant%s v%s\n\n", successColor(""), "", Version)
 
 	fmt.Printf("%sDescription:%s\n", warnColor(""), "")
 	fmt.Printf("  aish is a tool for people who love shell, but have bad memory.\n")
@@ -345,5 +353,6 @@ func displayHelp() {
 	fmt.Printf("  %s--config key=value%s   Set configuration (ai_key, helicone_key)\n", infoColor(""), "")
 	fmt.Printf("  %s--unsafe, -u%s         Run commands without confirmation prompts\n", infoColor(""), "")
 	fmt.Printf("  %s--debug%s              Enable debug mode to see API payloads and responses\n", infoColor(""), "")
-	fmt.Printf("  %s--help, -h%s           Display this help information\n\n", infoColor(""), "")
+	fmt.Printf("  %s--help, -h%s           Display this help information\n", infoColor(""), "")
+	fmt.Printf("  %s--version, -v%s        Display version information\n\n", infoColor(""), "")
 }
