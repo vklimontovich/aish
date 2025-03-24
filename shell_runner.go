@@ -5,24 +5,25 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/creack/pty"
-	"github.com/muesli/cancelreader"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
+
+	"github.com/creack/pty"
+	"github.com/fatih/color"
+	"github.com/muesli/cancelreader"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
-// ANSI Colors
-const (
-	Red    = "\033[91m"
-	Green  = "\033[92m"
-	Yellow = "\033[93m"
-	Cyan   = "\033[96m"
-	Bold   = "\033[1m\033[4m"
-	Reset  = "\033[0m"
+// Color functions that respect NO_COLOR and other environment variables
+var (
+	errorColor   = color.New(color.FgRed).SprintFunc()
+	successColor = color.New(color.FgGreen).SprintFunc()
+	warnColor    = color.New(color.FgYellow).SprintFunc()
+	infoColor    = color.New(color.FgCyan).SprintFunc()
+	boldColor    = color.New(color.Bold, color.Underline).SprintFunc()
 )
 
 // func main() {
@@ -68,7 +69,7 @@ func runShellCommand(cmd string) (string, string, int) {
 	}
 	defer r.Cancel()
 
-	// Send whatever we type into the PTY’s stdin
+	// Send whatever we type into the PTY's stdin
 	go func() {
 		buf := make([]byte, 1024)
 		for {
@@ -101,8 +102,8 @@ func format(pattern string, data interface{}) (string, error) {
 }
 
 func promptConfirm(cmdDescription string) (bool, error) {
-	// Format the command description with bold and reset ANSI codes
-	formattedCmd := fmt.Sprintf("%s%s%s", Bold, cmdDescription, Reset)
+	// Format the command description with bold formatting
+	formattedCmd := boldColor(cmdDescription)
 
 	// Print the prompt
 	fmt.Printf("Are you sure you want to run %s? [y/N]: ", formattedCmd)

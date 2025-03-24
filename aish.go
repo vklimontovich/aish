@@ -46,7 +46,7 @@ func loadConfig() Config {
 	cfg := Config{}
 	if data, err := os.ReadFile(configPath); err == nil {
 		if err := json.Unmarshal(data, &cfg); err != nil {
-			fmt.Printf("%s⚠️ Warning: Failed to parse config: %v%s\n", Yellow, err, Reset)
+			fmt.Printf("%s⚠️ Warning: Failed to parse config: %v\n", warnColor(""), err)
 		}
 	}
 
@@ -73,12 +73,12 @@ func saveConfig(cfg Config) {
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		exitWithError("Failed to write config: %v", err)
 	}
-	fmt.Printf("%s✅ Config saved to %s%s\n", Green, configPath, Reset)
+	fmt.Printf("%s✅ Config saved to %s\n", successColor(""), configPath)
 }
 
 // Exit with formatted error
 func exitWithError(format string, a ...any) {
-	fmt.Printf(Red+"❌ "+format+Reset+"\n", a...)
+	fmt.Printf(errorColor("❌ ")+format+"\n", a...)
 	os.Exit(1)
 }
 
@@ -93,9 +93,9 @@ func sendAPIRequest(messages []map[string]any, cfg Config) map[string]any {
 				"type": "object",
 				"properties": map[string]any{
 					"command": map[string]any{"type": "string", "description": "Shell command to execute. You can use pipes, && etc. The will be executed in the same shell as sh -c ..."},
-					"stop":    map[string]any{"type": "boolean", "description": "true if final command"},
+					"final":   map[string]any{"type": "boolean", "description": "true if final command"},
 				},
-				"required": []string{"command", "stop"},
+				"required": []string{"command", "final"},
 			},
 		},
 	}}
@@ -117,7 +117,7 @@ func sendAPIRequest(messages []map[string]any, cfg Config) map[string]any {
 	if debugFlag {
 		// Pretty-print the payload for debug output
 		prettyJSON, _ := json.MarshalIndent(payload, "", "  ")
-		fmt.Printf(Cyan+"ℹ️ Payload:\n%s"+Reset+"\n", string(prettyJSON))
+		fmt.Printf("%sℹ️ Payload:\n%s\n", infoColor(""), string(prettyJSON))
 	}
 
 	// Determine correct API host
@@ -151,7 +151,7 @@ func sendAPIRequest(messages []map[string]any, cfg Config) map[string]any {
 		var prettyResp interface{}
 		_ = json.Unmarshal(data, &prettyResp)
 		prettyJSON, _ := json.MarshalIndent(prettyResp, "", "  ")
-		fmt.Printf(Cyan+"ℹ️ Response:\n%s"+Reset+"\n", string(prettyJSON))
+		fmt.Printf("%sℹ️ Response:\n%s\n", infoColor(""), string(prettyJSON))
 	}
 	var jsonResp map[string]any
 	_ = json.Unmarshal(data, &jsonResp)
@@ -161,13 +161,21 @@ func sendAPIRequest(messages []map[string]any, cfg Config) map[string]any {
 func main() {
 	var useShell bool
 	var shellArgs []string
+	var helpFlag bool
 	// Parse CLI flags
 	pflag.StringArrayVar(&configArgs, "config", []string{}, "Set config value: --config ai_key=XXX")
 	pflag.BoolVar(&useShell, "shell", false, "Run command directly, mainly for testing")
 	pflag.BoolVarP(&unsafeFlag, "unsafe", "u", false, "Run without confirmation")
 	pflag.BoolVar(&debugFlag, "debug", false, "Debug mode")
+	pflag.BoolVarP(&helpFlag, "help", "h", false, "Display help information")
 	pflag.Parse()
 	args := pflag.Args()
+
+	// Display help if requested
+	if helpFlag {
+		displayHelp()
+		os.Exit(0)
+	}
 
 	cfg := loadConfig()
 
@@ -226,7 +234,7 @@ func main() {
 
 	systemPrompt := fmt.Sprintf(`
 	You are an assistant that helps users with shell commands on %s. Your ONLY goal is to build a command that solves the user's problem eventually.
-    If you need to ask for more information, use the run_shell_command function with stop=false. The response of this auxiliary command will be provided to you in the next step.
+    If you need to ask for more information, use the run_shell_command function with final=false. The response of this auxiliary command will be provided to you in the next step.
 	 
 	🔹 You must ALWAYS respond with exactly ONE function call: run_shell_command.
 	
@@ -235,12 +243,11 @@ func main() {
 	
 	Command Lifecycle:
 
-	- If ready to execute: call run_shell_command with stop=true.
-	- If more info is needed or testing a partial command: use stop=false.
-	- If a command with stop=false succeeds and looks final, REPEAT it with stop=true.
+	- If command is final, and gives the user a final result (it's important), call run_shell_command with final=true.
+	- If more info is needed, you can request it by calling run_shell_command with final=false. The output of this command will be provided to you in the next step.
 	
 	Failure Handling:
-	- If a final command fails, respond with a corrected command via run_shell_command.
+	- If a final command fails, the error will be provided to you in the next step. Try to correct error and issue a new final command
 	
 	🔒 MANDATORY: EVERY reply = exactly ONE run_shell_command function call.
 	`, runtime.GOOS)
@@ -276,7 +283,7 @@ func main() {
 		}
 
 		cmd := toolArgs["command"].(string)
-		stop := toolArgs["stop"].(bool)
+		final := toolArgs["final"].(bool)
 
 		if !unsafeFlag {
 			confirmed, err := promptConfirm(cmd)
@@ -284,18 +291,18 @@ func main() {
 				exitWithError("Error confirming command: %v", err)
 			}
 			if !confirmed {
-				fmt.Println(Yellow + "ℹ️ Command aborted." + Reset)
+				fmt.Println(warnColor("ℹ️ Command aborted."))
 				os.Exit(0)
 			}
 		}
 		cmdOutput, cmdError, resultCode := runShellCommand(cmd)
 
-		if stop {
+		if final {
 			if resultCode != 0 {
-				fmt.Printf(Red+"❌ Command failed with error: %s\n", cmdError)
+				fmt.Printf(errorColor("❌ Command failed with error: %s\n"), cmdError)
 				os.Exit(resultCode)
 			}
-			fmt.Printf(Green + "✅ Command succeeded!\n")
+			fmt.Printf(successColor("✅ Command succeeded!\n"))
 			os.Exit(0)
 		}
 
@@ -308,4 +315,35 @@ func main() {
 			map[string]any{"role": "tool", "tool_call_id": toolCall["id"], "content": fmt.Sprintf("The command %s. Stdout: %s. Stderr: %s.", resultStr, cmdOutput, cmdError)},
 		)
 	}
+}
+
+// Display help information about the tool
+func displayHelp() {
+	fmt.Printf("%s🚀 aish - AI Shell Assistant%s\n\n", successColor(""), "")
+
+	fmt.Printf("%sDescription:%s\n", warnColor(""), "")
+	fmt.Printf("  aish is a tool for people who love shell, but have bad memory.\n")
+	fmt.Printf("  Simply describe what you want to do in plain English,\n")
+	fmt.Printf("  and aish will suggest and execute the appropriate shell commands (it's safe, command will be confirmed before execution).\n\n")
+	fmt.Printf("  Currently, aish works with OpenAI only and requires an API key.\n")
+
+	fmt.Printf("%sUsage:%s\n", warnColor(""), "")
+	fmt.Printf("  aish [options] \"your prompt here\"\n\n")
+
+	fmt.Printf("%sSetup:%s\n", warnColor(""), "")
+	fmt.Printf("  %s🔑 Configure your API key:%s\n", successColor(""), "")
+	fmt.Printf("    aish --config ai_key=sk-your-openai-key\n\n")
+
+	fmt.Printf("%sExample:%s\n", warnColor(""), "")
+	fmt.Printf("  %s🔎 Find large files:%s\n", successColor(""), "")
+	fmt.Printf("    aish \"find the 5 largest files in the current directory\"\n\n")
+
+	fmt.Printf("  %s🔎 Find large files:%s\n", successColor(""), "")
+	fmt.Printf("    aish \"what is the largest process in memory right now and what is the full path to a command that started it\"\n\n")
+
+	fmt.Printf("%sOptions:%s\n", warnColor(""), "")
+	fmt.Printf("  %s--config key=value%s   Set configuration (ai_key, helicone_key)\n", infoColor(""), "")
+	fmt.Printf("  %s--unsafe, -u%s         Run commands without confirmation prompts\n", infoColor(""), "")
+	fmt.Printf("  %s--debug%s              Enable debug mode to see API payloads and responses\n", infoColor(""), "")
+	fmt.Printf("  %s--help, -h%s           Display this help information\n\n", infoColor(""), "")
 }

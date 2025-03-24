@@ -1,0 +1,108 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g., 0.5.7)"
+        required: true
+        type: string
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout aish repo
+        uses: actions/checkout@v4
+
+      - name: Set up version
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+            TAG="v$VERSION"
+          else
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#v}
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download release assets
+        run: |
+          mkdir dist
+          platforms=("darwin_amd64" "darwin_arm64" "linux_amd64" "linux_arm64")
+          for platform in "${platforms[@]}"; do
+            FILE="aish_${{ steps.vars.outputs.version }}_${platform}.tar.gz"
+            curl -L -o "dist/$FILE" "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/$FILE"
+          done
+
+      - name: Calculate SHA256 checksums
+        id: checksums
+        run: |
+          for FILE in dist/*; do
+            BASENAME=$(basename "$FILE")
+            SHA=$(shasum -a 256 "$FILE" | awk '{print $1}')
+            echo "$BASENAME: $SHA"
+            case $BASENAME in
+              *darwin_amd64*) echo "sha_darwin_amd64=$SHA" >> $GITHUB_OUTPUT ;;
+              *darwin_arm64*) echo "sha_darwin_arm64=$SHA" >> $GITHUB_OUTPUT ;;
+              *linux_amd64*)  echo "sha_linux_amd64=$SHA" >> $GITHUB_OUTPUT ;;
+              *linux_arm64*)  echo "sha_linux_arm64=$SHA" >> $GITHUB_OUTPUT ;;
+            esac
+          done
+
+      - name: Clone homebrew-sh tap
+        uses: actions/checkout@v4
+        with:
+          repository: vklimontovich/homebrew-aish
+          token: ${{ secrets.GITHUB_TOKEN_CROSSREPO }}
+          path: homebrew-sh
+
+      - name: Update versioned formula
+        run: |
+          FORMULA="aish@${{ steps.vars.outputs.version }}"
+          FORMULA_PATH="homebrew-sh/Formula/$FORMULA.rb"
+          cat > "$FORMULA_PATH" <<EOF
+            class ${FORMULA//./} < Formula
+              desc "AI Shell – natural language CLI for your terminal"
+              homepage "https://github.com/vklimontovich/aish"
+              version "${{ steps.vars.outputs.version }}"
+
+              if OS.mac? && Hardware::CPU.intel?
+                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_darwin_amd64.tar.gz"
+                sha256 "${{ steps.checksums.outputs.sha_darwin_amd64 }}"
+              elsif OS.mac? && Hardware::CPU.arm?
+                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_darwin_arm64.tar.gz"
+                sha256 "${{ steps.checksums.outputs.sha_darwin_arm64 }}"
+              elsif OS.linux? && Hardware::CPU.intel?
+                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_linux_amd64.tar.gz"
+                sha256 "${{ steps.checksums.outputs.sha_linux_amd64 }}"
+              elsif OS.linux? && Hardware::CPU.arm?
+                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_linux_arm64.tar.gz"
+                sha256 "${{ steps.checksums.outputs.sha_linux_arm64 }}"
+              end
+
+              def install
+                bin.install "aish"
+              end
+
+              test do
+                system "#{bin}/aish", "--version"
+              end
+            end
+
+      - name: Update latest formula symlink (aish.rb)
+        run: |
+          cp "homebrew-sh/Formula/aish@${{ steps.vars.outputs.version }}.rb" "homebrew-sh/Formula/aish.rb"
+
+      - name: Commit and push formulas
+        run: |
+          cd homebrew-sh
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/aish@${{ steps.vars.outputs.version }}.rb Formula/aish.rb
+          git commit -m "Add aish v${{ steps.vars.outputs.version }} formula"
+          git push
