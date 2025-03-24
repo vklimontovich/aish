@@ -61,38 +61,22 @@ jobs:
           token: ${{ secrets.CROSSREPO_GITHUB_TOKEN }}
           path: homebrew-sh
 
-      - name: Update versioned formula
+      - name: Generate versioned formula from template
         run: |
-          FORMULA="aish@${{ steps.vars.outputs.version }}"
-          FORMULA_PATH="homebrew-sh/Formula/$FORMULA.rb"
-          cat > "$FORMULA_PATH" <<EOF
-            class ${FORMULA//./} < Formula
-              desc "AI Shell – natural language CLI for your terminal"
-              homepage "https://github.com/vklimontovich/aish"
-              version "${{ steps.vars.outputs.version }}"
-
-              if OS.mac? && Hardware::CPU.intel?
-                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_darwin_amd64.tar.gz"
-                sha256 "${{ steps.checksums.outputs.sha_darwin_amd64 }}"
-              elsif OS.mac? && Hardware::CPU.arm?
-                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_darwin_arm64.tar.gz"
-                sha256 "${{ steps.checksums.outputs.sha_darwin_arm64 }}"
-              elsif OS.linux? && Hardware::CPU.intel?
-                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_linux_amd64.tar.gz"
-                sha256 "${{ steps.checksums.outputs.sha_linux_amd64 }}"
-              elsif OS.linux? && Hardware::CPU.arm?
-                url "https://github.com/vklimontovich/aish/releases/download/${{ steps.vars.outputs.tag }}/aish_${{ steps.vars.outputs.version }}_linux_arm64.tar.gz"
-                sha256 "${{ steps.checksums.outputs.sha_linux_arm64 }}"
-              end
-
-              def install
-                bin.install "aish"
-              end
-
-              test do
-                system "#{bin}/aish", "--version"
-              end
-            end
+          VERSION="${{ steps.vars.outputs.version }}"
+          TAG="${{ steps.vars.outputs.tag }}"
+          FORMULA_NAME="aish@${VERSION}"
+          FORMULA_PATH="homebrew-sh/Formula/$FORMULA_NAME.rb"
+          VERSION_NO_DOTS="${VERSION//./}"
+          
+          sed -e "s/{{VERSION}}/$VERSION/g" \
+              -e "s/{{TAG}}/$TAG/g" \
+              -e "s/{{VERSION_NO_DOTS}}/$VERSION_NO_DOTS/g" \
+              -e "s/{{SHA_DARWIN_AMD64}}/${{ steps.checksums.outputs.sha_darwin_amd64 }}/g" \
+              -e "s/{{SHA_DARWIN_ARM64}}/${{ steps.checksums.outputs.sha_darwin_arm64 }}/g" \
+              -e "s/{{SHA_LINUX_AMD64}}/${{ steps.checksums.outputs.sha_linux_amd64 }}/g" \
+              -e "s/{{SHA_LINUX_ARM64}}/${{ steps.checksums.outputs.sha_linux_arm64 }}/g" \
+              homebrew-sh/formula_template.rb > "$FORMULA_PATH"
 
       - name: Update latest formula symlink (aish.rb)
         run: |
