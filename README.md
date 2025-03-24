@@ -6,7 +6,7 @@
 
 Example: 
 ```
-❯ ./aish **what is the largest process in memory right now and what is the full path to a command that started it**
+❯ aish **what is the largest process in memory right now and what is the full path to a command that started it**
 💬 Tool wants to run: ps aux --sort=-%mem | awk 'NR==2{print $11, $6}'
 Run this command? [y/N] y
 ℹ️ Running command: ps aux --sort=-%mem | awk 'NR==2{print $11, $6}'

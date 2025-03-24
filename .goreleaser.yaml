@@ -1,10 +1,10 @@
-project_name: aish
 version: 2
+project_name: aish
 
 builds:
   - id: aish
     main: .
-    binary: ai
+    binary: aish
     goos: [darwin, linux]
     goarch: [amd64, arm64]
     ldflags:
@@ -12,7 +12,6 @@ builds:
 
 archives:
   - id: default
-    format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
@@ -22,8 +21,7 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 
 brews:
-  - name: aish
-    repository:
+  - repository:
       owner: vklimontovich
       name: homebrew-aish
     commit_author:
@@ -33,7 +31,8 @@ brews:
     description: "AI-powered shell assistant"
     license: MIT
     install: |
-      bin.install "ai"
+      bin.install "aish"
+    name: aish
 
 release:
   github:
@@ -42,3 +41,6 @@ release:
 
 changelog:
   use: git
+
+snapshot:
+  version_template: "{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}"
