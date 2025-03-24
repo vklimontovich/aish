@@ -12,6 +12,7 @@ on:
 
 jobs:
   update-formula:
+    name: Update Homebrew Formula in vklimontovich/homebrew-aish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout aish repo
@@ -54,19 +55,19 @@ jobs:
             esac
           done
 
-      - name: Clone homebrew-sh tap
+      - name: Clone homebrew-aish tap
         uses: actions/checkout@v4
         with:
           repository: vklimontovich/homebrew-aish
           token: ${{ secrets.CROSSREPO_GITHUB_TOKEN }}
-          path: homebrew-sh
+          path: homebrew-aish
 
       - name: Generate versioned formula from template
         run: |
           VERSION="${{ steps.vars.outputs.version }}"
           TAG="${{ steps.vars.outputs.tag }}"
           FORMULA_NAME="aish@${VERSION}"
-          FORMULA_PATH="homebrew-sh/Formula/$FORMULA_NAME.rb"
+          FORMULA_PATH="homebrew-aish/Formula/$FORMULA_NAME.rb"
           VERSION_NO_DOTS="${VERSION//./}"
           
           sed -e "s/{{VERSION}}/$VERSION/g" \
@@ -76,15 +77,15 @@ jobs:
               -e "s/{{SHA_DARWIN_ARM64}}/${{ steps.checksums.outputs.sha_darwin_arm64 }}/g" \
               -e "s/{{SHA_LINUX_AMD64}}/${{ steps.checksums.outputs.sha_linux_amd64 }}/g" \
               -e "s/{{SHA_LINUX_ARM64}}/${{ steps.checksums.outputs.sha_linux_arm64 }}/g" \
-              homebrew-sh/formula_template.rb > "$FORMULA_PATH"
+              homebrew-aish/formula_template.rb > "$FORMULA_PATH"
 
       - name: Update latest formula symlink (aish.rb)
         run: |
-          cp "homebrew-sh/Formula/aish@${{ steps.vars.outputs.version }}.rb" "homebrew-sh/Formula/aish.rb"
+          cp "homebrew-aish/Formula/aish@${{ steps.vars.outputs.version }}.rb" "homebrew-aish/Formula/aish.rb"
 
       - name: Commit and push formulas
         run: |
-          cd homebrew-sh
+          cd homebrew-aish
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add Formula/aish@${{ steps.vars.outputs.version }}.rb Formula/aish.rb
