@@ -79,9 +79,22 @@ jobs:
               -e "s/{{SHA_LINUX_ARM64}}/${{ steps.checksums.outputs.sha_linux_arm64 }}/g" \
               homebrew-aish/formula_template.rb > "$FORMULA_PATH"
 
-      - name: Update latest formula symlink (aish.rb)
+      - name: Generate latest formula from template
         run: |
-          cp "homebrew-aish/Formula/aish@${{ steps.vars.outputs.version }}.rb" "homebrew-aish/Formula/aish.rb"
+          VERSION="${{ steps.vars.outputs.version }}"
+          TAG="${{ steps.vars.outputs.tag }}"
+          FORMULA_NAME="aish"
+          FORMULA_PATH="homebrew-aish/Formula/$FORMULA_NAME.rb"
+          VERSION_NO_DOTS=""
+          
+          sed -e "s/{{VERSION}}/$VERSION/g" \
+              -e "s/{{TAG}}/$TAG/g" \
+              -e "s/{{VERSION_NO_DOTS}}/$VERSION_NO_DOTS/g" \
+              -e "s/{{SHA_DARWIN_AMD64}}/${{ steps.checksums.outputs.sha_darwin_amd64 }}/g" \
+              -e "s/{{SHA_DARWIN_ARM64}}/${{ steps.checksums.outputs.sha_darwin_arm64 }}/g" \
+              -e "s/{{SHA_LINUX_AMD64}}/${{ steps.checksums.outputs.sha_linux_amd64 }}/g" \
+              -e "s/{{SHA_LINUX_ARM64}}/${{ steps.checksums.outputs.sha_linux_arm64 }}/g" \
+              homebrew-aish/formula_template.rb > "$FORMULA_PATH"
 
       - name: Commit and push formulas
         run: |
