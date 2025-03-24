@@ -68,7 +68,7 @@ jobs:
           TAG="${{ steps.vars.outputs.tag }}"
           FORMULA_NAME="aish@${VERSION}"
           FORMULA_PATH="homebrew-aish/Formula/$FORMULA_NAME.rb"
-          VERSION_NO_DOTS="${VERSION//./}"
+          VERSION_NO_DOTS="${VERSION//./_}"
           
           sed -e "s/{{VERSION}}/$VERSION/g" \
               -e "s/{{TAG}}/$TAG/g" \
