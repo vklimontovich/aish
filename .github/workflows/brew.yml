@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: vklimontovich/homebrew-aish
-          token: ${{ secrets.GITHUB_TOKEN_CROSSREPO }}
+          token: ${{ secrets.GCROSSREPO_ITHUB_TOKEN }}
           path: homebrew-sh
 
       - name: Update versioned formula
