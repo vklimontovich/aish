@@ -10,9 +10,10 @@ on:
         description: 'Version to release (e.g., 1.2.3)'
         required: true
       dry_run:
-        description: 'Dry run (true/false)'
+        description: 'Dry run'
         required: false
-        default: 'false'
+        default: true
+        type: boolean
 
 jobs:
   build-and-release:
@@ -42,7 +43,7 @@ jobs:
           EOF
 
       - name: Create Git tag (manual run only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run != 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == false }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
@@ -60,7 +61,7 @@ jobs:
           install-only: true
 
       - name: Run GoReleaser
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true' }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != false }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: goreleaser release --clean
